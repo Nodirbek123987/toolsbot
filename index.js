@@ -10,11 +10,11 @@ const products = productsData.products;
 const ORDERS_FILE = path.join(__dirname, 'data', 'orders.json');
 
 // Константы
-const DELIVERY_COST = 50000;
+const DELIVERY_COST = 30000;
 const PICKUP_LOCATION = {
   latitude: 41.23863342225998,
   longitude: 69.33293278867168,
-  address: "Базар Куйлюк"
+  address: "Базар Куйлюк 1 павильон 13 магазин"
 };
 
 // Инициализация бота
