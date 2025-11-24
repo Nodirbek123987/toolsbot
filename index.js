@@ -4,10 +4,34 @@ const fs = require('fs');
 const path = require('path');
 const Keyboard = require('./utils/keyboard');
 
+// Определяем абсолютные пути
+const DATA_DIR = path.join(__dirname, 'data');
+const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
+const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
+
+// Создаем папку data если не существует
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
 // Загрузка данных
-const productsData = require('./data/products.json');
+let productsData = { products: {} };
+try {
+  if (fs.existsSync(PRODUCTS_FILE)) {
+    const data = fs.readFileSync(PRODUCTS_FILE, 'utf8');
+    productsData = JSON.parse(data);
+    console.log('✅ products.json загружен успешно');
+  } else {
+    console.log('⚠️ products.json не найден, создаем пустой файл');
+    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify({ products: {} }, null, 2));
+  }
+} catch (error) {
+  console.error('❌ Ошибка загрузки products.json:', error);
+  // Создаем backup пустой структуры
+  productsData = { products: {} };
+}
+
 const products = productsData.products;
-const ORDERS_FILE = path.join(__dirname, 'data', 'orders.json');
 
 // Константы
 const DELIVERY_COST = 50000;
@@ -23,6 +47,7 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 // Убедимся, что файл orders.json существует
 if (!fs.existsSync(ORDERS_FILE)) {
   fs.writeFileSync(ORDERS_FILE, JSON.stringify([], null, 2));
+  console.log('✅ orders.json создан');
 }
 
 // Временное хранилище для данных пользователей
@@ -101,6 +126,7 @@ function loadOrders() {
     const data = fs.readFileSync(ORDERS_FILE, 'utf8');
     return JSON.parse(data);
   } catch (error) {
+    console.error('Ошибка загрузки заказов:', error);
     return [];
   }
 }
@@ -183,7 +209,7 @@ bot.on('callback_query', async (callbackQuery) => {
       await bot.editMessageText(categoryText, {
         chat_id: chatId,
         message_id: message.message_id,
-        ...Keyboard.categoryBrands(categoryId)
+        ...Keyboard.categoryBrands(categoryId, products)
       });
     }
     else if (data.startsWith('brand_')) {
@@ -198,7 +224,7 @@ bot.on('callback_query', async (callbackQuery) => {
       await bot.editMessageText(brandText, {
         chat_id: chatId,
         message_id: message.message_id,
-        ...Keyboard.brandProducts(categoryId, brandId)
+        ...Keyboard.brandProducts(categoryId, brandId, products)
       });
     }
     else if (data.startsWith('product_')) {
@@ -276,7 +302,7 @@ bot.on('callback_query', async (callbackQuery) => {
           await bot.editMessageText(`🔧 ${categoryName}\n\nВыберите бренд:`, {
             chat_id: chatId,
             message_id: message.message_id,
-            ...Keyboard.categoryBrands(categoryId)
+            ...Keyboard.categoryBrands(categoryId, products)
           });
         }
       } else {

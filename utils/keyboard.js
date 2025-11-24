@@ -1,6 +1,3 @@
-const productsData = require('../data/products.json');
-const products = productsData.products;
-
 class Keyboard {
   static mainMenu() {
     return {
@@ -27,7 +24,7 @@ class Keyboard {
     };
   }
 
-  static categoryBrands(categoryId) {
+  static categoryBrands(categoryId, products) {
     const categoryMap = {
       'cat_1': 'Болгарки',
       'cat_2': 'Лазерные уровни',
@@ -48,6 +45,8 @@ class Keyboard {
     };
 
     const categoryName = categoryMap[categoryId];
+    
+    // Получаем бренды для данной категории
     const categoryBrands = products[categoryName] ? Object.keys(products[categoryName]) : [];
     
     const keyboard = categoryBrands.map(brand => {
@@ -67,7 +66,7 @@ class Keyboard {
     };
   }
 
-  static brandProducts(categoryId, brandId) {
+  static brandProducts(categoryId, brandId, products) {
     const categoryMap = {
       'cat_1': 'Болгарки',
       'cat_2': 'Лазерные уровни',
@@ -108,7 +107,11 @@ class Keyboard {
 
     const categoryName = categoryMap[categoryId];
     const brandName = brandMap[brandId];
-    const brandProducts = products[categoryName] && products[categoryName][brandName] ? products[categoryName][brandName] : [];
+    
+    // Проверяем существование категории и бренда
+    const brandProducts = products[categoryName] && products[categoryName][brandName] 
+      ? products[categoryName][brandName] 
+      : [];
     
     const keyboard = brandProducts.map(product => [
       { 
@@ -146,7 +149,7 @@ class Keyboard {
       'Прочие': 'prochie'
     };
     
-    return brandMap[brandName] || 'other';
+    return brandMap[brandName] || brandName.toLowerCase();
   }
 
   static productOptions(productId) {
@@ -199,8 +202,7 @@ class Keyboard {
           one_time_keyboard: true
         }
       };
-    }
-     else {
+    } else {
       return {
         reply_markup: {
           keyboard: [
