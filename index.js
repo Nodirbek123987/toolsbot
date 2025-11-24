@@ -10,11 +10,11 @@ const products = productsData.products;
 const ORDERS_FILE = path.join(__dirname, 'data', 'orders.json');
 
 // Константы
-const DELIVERY_COST = 30000;
+const DELIVERY_COST = 50000;
 const PICKUP_LOCATION = {
   latitude: 41.23863342225998,
   longitude: 69.33293278867168,
-  address: "Базар Куйлюк 1 павильон 13 магазин"
+  address: "Базар Куйлюк"
 };
 
 // Инициализация бота
@@ -41,7 +41,7 @@ function loadOrders() {
 function saveOrder(order) {
   const orders = loadOrders();
   order.id = Date.now();
-  order.status = 'pending';
+  order.status = 'pending'; // pending, approved, payment_received, rejected
   order.createdAt = new Date().toISOString();
   orders.push(order);
   fs.writeFileSync(ORDERS_FILE, JSON.stringify(orders, null, 2));
@@ -175,38 +175,53 @@ bot.on('callback_query', async (callbackQuery) => {
       const order = updateOrderStatus(orderId, 'approved');
       
       if (order) {
+        // Рассчитываем общую сумму
+        const totalAmount = order.totalAmount || calculateTotalAmount(order.productPrice, order.delivery);
+        
+        // Уведомляем админа об успешном подтверждении заказа
+        let adminMessage = `✅ Заказ #${orderId} подтвержден\n\nТовар: ${order.productName}\nЦена: ${order.productPrice} сум\n${order.delivery === '📦 Доставка' ? `Доставка: ${formatPrice(DELIVERY_COST)} сум\n` : ''}Общая сумма: ${formatPrice(totalAmount)} сум\nКлиент: ${order.userName}\nТелефон: ${order.userPhone}\n\nОжидайте скриншот оплаты от клиента.`;
+        
+        await bot.editMessageText(adminMessage, {
+          chat_id: chatId,
+          message_id: message.message_id
+        });
+
+        // Отправляем пользователю инструкцию по оплате
+        const userMessage = `✅ Ваш заказ подтверждён!\n\nТовар: ${order.productName}\nЦена товара: ${order.productPrice} сум\n${order.delivery === '📦 Доставка' ? `Доставка: ${formatPrice(DELIVERY_COST)} сум\n` : ''}💵 Общая сумма: ${formatPrice(totalAmount)} сум\n\n💳 **Для оплаты переведите ${formatPrice(totalAmount)} сум на карту:**\n💳 **5614 6822 1296 5745**\n\nПосле оплаты отправьте скриншот чека в ответном сообщении.`;
+
+        await bot.sendMessage(order.userId, userMessage, Keyboard.removeKeyboard());
+        
+        // Сохраняем состояние для ожидания скриншота
+        userStates.set(order.userId, {
+          step: 'waiting_screenshot',
+          orderId: orderId
+        });
+      } else {
+        await bot.answerCallbackQuery(callbackQuery.id, { text: 'Заказ не найден' });
+      }
+      
+      await bot.answerCallbackQuery(callbackQuery.id);
+    }
+    else if (data.startsWith('payment_confirm_')) {
+      // Обработка подтверждения оплаты админом
+      if (chatId.toString() !== process.env.ADMIN_ID) {
+        return bot.answerCallbackQuery(callbackQuery.id, { text: 'У вас нет прав для этого действия' });
+      }
+      
+      const orderId = parseInt(data.replace('payment_confirm_', ''));
+      const order = updateOrderStatus(orderId, 'payment_received');
+      
+      if (order) {
         // Уведомляем админа
-        await bot.editMessageText(`✅ Заказ #${orderId} подтвержден`, {
+        await bot.editMessageText(`💰 Оплата по заказу #${orderId} подтверждена!\n\nЗаказ готов к отгрузке.`, {
           chat_id: chatId,
           message_id: message.message_id
         });
         
-        // Рассчитываем общую сумму
-        const totalAmount = order.totalAmount || calculateTotalAmount(order.productPrice, order.delivery);
-        
-        // Определяем сообщение в зависимости от способа оплаты
-        let paymentMessage = '';
-        
-        if (order.paymentMethod === 'card') {
-          paymentMessage = `💳 Для оплаты переведите сумму ${formatPrice(totalAmount)} сум на карту:\n💳 **5614 6822 1296 5745**\n\nПосле оплаты отправьте скриншот чека в ответном сообщении.`;
-        } else if (order.paymentMethod === 'cash') {
-          paymentMessage = `💵 Оплата наличными при получении.\nСумма к оплате: ${formatPrice(totalAmount)} сум`;
-        } else {
-          paymentMessage = `💳 Для оплаты переведите сумму ${formatPrice(totalAmount)} сум на карту:\n💳 **5614 6822 1296 5745**\n\nИли оплатите наличными при получении.`;
-        }
-
         // Уведомляем пользователя
-        const userMessage = `✅ Ваш заказ подтверждён!\n\nТовар: ${order.productName}\nЦена товара: ${order.productPrice} сум\n${order.delivery === '📦 Доставка' ? `Доставка: ${formatPrice(DELIVERY_COST)} сум\n` : ''}💵 Общая сумма: ${formatPrice(totalAmount)} сум\nСпособ оплаты: ${order.paymentMethod === 'card' ? 'Картой' : order.paymentMethod === 'cash' ? 'Наличными' : 'Не указан'}\n\n${paymentMessage}`;
+        const userMessage = `💰 Оплата подтверждена!\n\nСпасибо за оплату! Ваш заказ передан в обработку.\n\nТовар: ${order.productName}\n${order.delivery === '🚗 Самовывоз' ? `📍 Самовывоз: ${PICKUP_LOCATION.address}` : '🚚 Доставка будет осуществлена по указанному адресу'}\n\nСвяжемся с вами для уточнения деталей.`;
 
         await bot.sendMessage(order.userId, userMessage, Keyboard.removeKeyboard());
-        
-        // Сохраняем состояние для ожидания скриншота, если оплата картой
-        if (order.paymentMethod === 'card') {
-          userStates.set(order.userId, {
-            step: 'waiting_screenshot',
-            orderId: orderId
-          });
-        }
       } else {
         await bot.answerCallbackQuery(callbackQuery.id, { text: 'Заказ не найден' });
       }
@@ -335,7 +350,6 @@ bot.on('message', async (msg) => {
 
         if (userState.delivery === '📦 Доставка' && userState.deliveryLocation) {
           adminMessage += `\n📍 Локация доставки: ${userState.deliveryLocation.latitude}, ${userState.deliveryLocation.longitude}`;
-          // Отправляем локацию админу
           await bot.sendLocation(process.env.ADMIN_ID, userState.deliveryLocation.latitude, userState.deliveryLocation.longitude);
         } else if (userState.delivery === '🚗 Самовывоз') {
           adminMessage += `\n📍 Самовывоз: ${PICKUP_LOCATION.address}`;
@@ -397,16 +411,19 @@ bot.on('photo', async (msg) => {
     const orders = loadOrders();
     const order = orders.find(o => o.id === orderId);
     
-    if (order) {
-      // Отправляем скриншот админу
+    if (order && order.status === 'approved') {
+      // Отправляем скриншот админу с кнопкой подтверждения оплаты
       const photoId = msg.photo[msg.photo.length - 1].file_id;
       const totalAmount = order.totalAmount || calculateTotalAmount(order.productPrice, order.delivery);
-      const caption = `📸 Скриншот чека для заказа #${orderId}\n\nТовар: ${order.productName}\nСумма: ${formatPrice(totalAmount)} сум\nКлиент: ${order.userName}\nТелефон: ${order.userPhone}`;
+      const caption = `📸 Скриншот чека для заказа #${orderId}\n\nТовар: ${order.productName}\nСумма: ${formatPrice(totalAmount)} сум\nКлиент: ${order.userName}\nТелефон: ${order.userPhone}\n\nПодтвердите получение оплаты:`;
       
-      await bot.sendPhoto(process.env.ADMIN_ID, photoId, { caption: caption });
+      await bot.sendPhoto(process.env.ADMIN_ID, photoId, { 
+        caption: caption,
+        ...Keyboard.adminPaymentActions(orderId)
+      });
       
       // Подтверждаем пользователю
-      await bot.sendMessage(chatId, '✅ Скриншот чека получен! Спасибо. Мы проверим оплату и свяжемся с вами для уточнения деталей доставки.');
+      await bot.sendMessage(chatId, '✅ Скриншот чека получен! Ожидайте подтверждения оплаты администратором.');
       
       // Очищаем состояние пользователя
       userStates.delete(chatId);
@@ -445,6 +462,7 @@ bot.onText(/\/orders/, (msg) => {
       ordersText += `Телефон: ${order.userPhone}\n`;
       ordersText += `Доставка: ${order.delivery}\n`;
       ordersText += `Оплата: ${order.paymentMethod === 'card' ? 'Картой' : order.paymentMethod === 'cash' ? 'Наличными' : 'Не указана'}\n`;
+      ordersText += `Статус: ${order.status}\n`;
       ordersText += `Дата: ${new Date(order.createdAt).toLocaleString()}\n`;
       ordersText += '────────────────────\n';
     } catch (error) {
@@ -472,6 +490,7 @@ bot.onText(/\/allorders/, (msg) => {
   const statusEmoji = {
     'pending': '⏳',
     'approved': '✅',
+    'payment_received': '💰',
     'rejected': '❌'
   };
   

@@ -103,7 +103,18 @@ class Keyboard {
     return {
       reply_markup: {
         inline_keyboard: [
-          [{ text: '✔️ Подтвердить', callback_data: `approve_${orderId}` }],
+          [{ text: '✔️ Подтвердить заказ', callback_data: `approve_${orderId}` }],
+          [{ text: '❌ Отклонить', callback_data: `reject_${orderId}` }]
+        ]
+      }
+    };
+  }
+
+  static adminPaymentActions(orderId) {
+    return {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '💰 Подтвердить оплату', callback_data: `payment_confirm_${orderId}` }],
           [{ text: '❌ Отклонить', callback_data: `reject_${orderId}` }]
         ]
       }
