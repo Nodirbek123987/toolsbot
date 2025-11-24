@@ -1,1 +1,19 @@
-[]
+[
+  {
+    "userId": 5303600890,
+    "userName": "kk",
+    "userPhone": "hh",
+    "delivery": "🚗 Самовывоз",
+    "paymentMethod": "card",
+    "productId": 1,
+    "productName": "Дрель Makita HP1640",
+    "productPrice": "850 000",
+    "productDescription": "Мощная дрель с регулировкой скорости",
+    "totalAmount": 850000,
+    "deliveryCost": 0,
+    "id": 1763982792478,
+    "status": "approved",
+    "createdAt": "2025-11-24T11:13:12.478Z",
+    "updatedAt": "2025-11-24T11:18:17.642Z"
+  }
+]
