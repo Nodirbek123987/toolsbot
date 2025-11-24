@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: telegram-tools-bot
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: BOT_TOKEN
+        value: 5283669620:AAHPLd96KqsLUOmjxnZxL4mctT9igYga9Dk
+      - key: ADMIN_ID
+        value: 25160

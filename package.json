@@ -1,0 +1,17 @@
+{
+  "name": "telegram-tools-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot for selling power tools",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "node-telegram-bot-api": "^0.64.0",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
