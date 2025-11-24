@@ -1,61 +1,39 @@
+const productsData = require('../data/products.json');
+const products = productsData.products;
+
 class Keyboard {
   static mainMenu() {
     return {
       reply_markup: {
         inline_keyboard: [
-          [{ text: '🔥 Болгарки', callback_data: 'cat_1' }],
-          [{ text: '📐 Лазерные уровни', callback_data: 'cat_2' }],
-          [{ text: '⚡ Шуруповёрты', callback_data: 'cat_3' }],
-          [{ text: '🛠️ Дрели', callback_data: 'cat_4' }],
-          [{ text: '⚒️ Перфораторы', callback_data: 'cat_5' }],
-          [{ text: '📦 Наборы', callback_data: 'cat_6' }],
-          [{ text: '🔧 Аксессуары', callback_data: 'cat_7' }],
-          [{ text: '📏 Измерения', callback_data: 'cat_8' }],
-          [{ text: '🌀 Шлифмашины', callback_data: 'cat_9' }],
-          [{ text: '🔩 Гайковёрты', callback_data: 'cat_10' }],
-          [{ text: '🔥 Тепловые', callback_data: 'cat_11' }],
-          [{ text: '📹 Эндоскопы', callback_data: 'cat_12' }],
-          [{ text: '🛠️ Прочие', callback_data: 'cat_13' }],
-          [{ text: '💧 Насосы', callback_data: 'cat_14' }],
-          [{ text: '🔨 Фрезеры', callback_data: 'cat_15' }],
-          [{ text: '⚡ Электро', callback_data: 'cat_16' }]
+          [{ text: '🔥 Болгарки', callback_data: 'category_Болгарки' }],
+          [{ text: '📐 Лазерные уровни', callback_data: 'category_Лазерные уровни' }],
+          [{ text: '⚡ Шуруповёрты', callback_data: 'category_Шуруповёрты' }],
+          [{ text: '🛠️ Дрели', callback_data: 'category_Дрели' }],
+          [{ text: '⚒️ Перфораторы', callback_data: 'category_Перфораторы' }],
+          [{ text: '📦 Наборы инструментов', callback_data: 'category_Наборы инструментов' }],
+          [{ text: '🔧 Насадки и аксессуары', callback_data: 'category_Насадки и аксессуары' }],
+          [{ text: '📏 Измерительные инструменты', callback_data: 'category_Измерительные инструменты' }],
+          [{ text: '🌀 Шлифовальные машины', callback_data: 'category_Шлифовальные машины' }],
+          [{ text: '🔩 Гайковёрты', callback_data: 'category_Гайковёрты' }],
+          [{ text: '🔥 Тепловое оборудование', callback_data: 'category_Тепловое оборудование' }],
+          [{ text: '📹 Эндоскопы', callback_data: 'category_Эндоскопы' }],
+          [{ text: '🛠️ Прочие инструменты', callback_data: 'category_Прочие инструменты' }],
+          [{ text: '💧 Насосы и опрыскиватели', callback_data: 'category_Насосы и опрыскиватели' }]
         ]
       }
     };
   }
 
-  static categoryBrands(categoryId, products) {
-    const categoryMap = {
-      'cat_1': 'Болгарки',
-      'cat_2': 'Лазерные уровни',
-      'cat_3': 'Шуруповёрты',
-      'cat_4': 'Дрели',
-      'cat_5': 'Перфораторы',
-      'cat_6': 'Наборы инструментов',
-      'cat_7': 'Насадки и аксессуары',
-      'cat_8': 'Измерительные инструменты',
-      'cat_9': 'Шлифовальные машины',
-      'cat_10': 'Гайковёрты',
-      'cat_11': 'Тепловое оборудование',
-      'cat_12': 'Эндоскопы',
-      'cat_13': 'Прочие инструменты',
-      'cat_14': 'Насосы и опрыскиватели',
-      'cat_15': 'Фрезеры',
-      'cat_16': 'Электрооборудование'
-    };
-
-    const categoryName = categoryMap[categoryId];
-    
-    // Получаем бренды для данной категории
-    const categoryBrands = products[categoryName] ? Object.keys(products[categoryName]) : [];
-    
-    const keyboard = categoryBrands.map(brand => {
-      const brandId = this.getBrandId(brand);
-      return [{ 
+  // ... остальные методы остаются без изменений
+  static categoryBrands(category) {
+    const categoryBrands = products[category] ? Object.keys(products[category]) : [];
+    const keyboard = categoryBrands.map(brand => [
+      { 
         text: brand, 
-        callback_data: `brand_${categoryId}_${brandId}` 
-      }];
-    });
+        callback_data: `brand_${category}_${brand}` 
+      }
+    ]);
     
     keyboard.push([{ text: '⬅️ Назад', callback_data: 'back_to_categories' }]);
     
@@ -66,53 +44,8 @@ class Keyboard {
     };
   }
 
-  static brandProducts(categoryId, brandId, products) {
-    const categoryMap = {
-      'cat_1': 'Болгарки',
-      'cat_2': 'Лазерные уровни',
-      'cat_3': 'Шуруповёрты',
-      'cat_4': 'Дрели',
-      'cat_5': 'Перфораторы',
-      'cat_6': 'Наборы инструментов',
-      'cat_7': 'Насадки и аксессуары',
-      'cat_8': 'Измерительные инструменты',
-      'cat_9': 'Шлифовальные машины',
-      'cat_10': 'Гайковёрты',
-      'cat_11': 'Тепловое оборудование',
-      'cat_12': 'Эндоскопы',
-      'cat_13': 'Прочие инструменты',
-      'cat_14': 'Насосы и опрыскиватели',
-      'cat_15': 'Фрезеры',
-      'cat_16': 'Электрооборудование'
-    };
-
-    const brandMap = {
-      'makita': 'Makita',
-      'bosch': 'Bosch',
-      'dewalt': 'DeWalt',
-      'milwaukee': 'Milwaukee',
-      'onex': 'ONE X',
-      'interskol': 'Интерскол',
-      'crown': 'Crown',
-      'univ': 'Универсальные',
-      'slavmash': 'Славмаш',
-      'uni_t': 'UNI-T',
-      'richda': 'Richda',
-      'ingco': 'INGCO',
-      'leo': 'LEO',
-      'raznie': 'Разные',
-      'komplekt': 'Комплект',
-      'prochie': 'Прочие'
-    };
-
-    const categoryName = categoryMap[categoryId];
-    const brandName = brandMap[brandId];
-    
-    // Проверяем существование категории и бренда
-    const brandProducts = products[categoryName] && products[categoryName][brandName] 
-      ? products[categoryName][brandName] 
-      : [];
-    
+  static brandProducts(category, brand) {
+    const brandProducts = products[category] && products[category][brand] ? products[category][brand] : [];
     const keyboard = brandProducts.map(product => [
       { 
         text: `${product.name} - ${product.price} сум`, 
@@ -120,36 +53,13 @@ class Keyboard {
       }
     ]);
     
-    keyboard.push([{ text: '⬅️ Назад к брендам', callback_data: categoryId }]);
+    keyboard.push([{ text: '⬅️ Назад к брендам', callback_data: `category_${category}` }]);
     
     return {
       reply_markup: {
         inline_keyboard: keyboard
       }
     };
-  }
-
-  static getBrandId(brandName) {
-    const brandMap = {
-      'Makita': 'makita',
-      'Bosch': 'bosch',
-      'DeWalt': 'dewalt',
-      'Milwaukee': 'milwaukee',
-      'ONE X': 'onex',
-      'Интерскол': 'interskol',
-      'Crown': 'crown',
-      'Универсальные': 'univ',
-      'Славмаш': 'slavmash',
-      'UNI-T': 'uni_t',
-      'Richda': 'richda',
-      'INGCO': 'ingco',
-      'LEO': 'leo',
-      'Разные': 'raznie',
-      'Комплект': 'komplekt',
-      'Прочие': 'prochie'
-    };
-    
-    return brandMap[brandName] || brandName.toLowerCase();
   }
 
   static productOptions(productId) {

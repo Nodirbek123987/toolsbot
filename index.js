@@ -4,34 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const Keyboard = require('./utils/keyboard');
 
-// Определяем абсолютные пути
-const DATA_DIR = path.join(__dirname, 'data');
-const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
-const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
-
-// Создаем папку data если не существует
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
 // Загрузка данных
-let productsData = { products: {} };
-try {
-  if (fs.existsSync(PRODUCTS_FILE)) {
-    const data = fs.readFileSync(PRODUCTS_FILE, 'utf8');
-    productsData = JSON.parse(data);
-    console.log('✅ products.json загружен успешно');
-  } else {
-    console.log('⚠️ products.json не найден, создаем пустой файл');
-    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify({ products: {} }, null, 2));
-  }
-} catch (error) {
-  console.error('❌ Ошибка загрузки products.json:', error);
-  // Создаем backup пустой структуры
-  productsData = { products: {} };
-}
-
+const productsData = require('./data/products.json');
 const products = productsData.products;
+const ORDERS_FILE = path.join(__dirname, 'data', 'orders.json');
 
 // Константы
 const DELIVERY_COST = 50000;
@@ -47,78 +23,10 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 // Убедимся, что файл orders.json существует
 if (!fs.existsSync(ORDERS_FILE)) {
   fs.writeFileSync(ORDERS_FILE, JSON.stringify([], null, 2));
-  console.log('✅ orders.json создан');
 }
 
 // Временное хранилище для данных пользователей
 const userStates = new Map();
-
-// Функции для работы с категориями и брендами
-const getCategoryName = (categoryId) => {
-  const categoryMap = {
-    'cat_1': 'Болгарки',
-    'cat_2': 'Лазерные уровни',
-    'cat_3': 'Шуруповёрты',
-    'cat_4': 'Дрели',
-    'cat_5': 'Перфораторы',
-    'cat_6': 'Наборы инструментов',
-    'cat_7': 'Насадки и аксессуары',
-    'cat_8': 'Измерительные инструменты',
-    'cat_9': 'Шлифовальные машины',
-    'cat_10': 'Гайковёрты',
-    'cat_11': 'Тепловое оборудование',
-    'cat_12': 'Эндоскопы',
-    'cat_13': 'Прочие инструменты',
-    'cat_14': 'Насосы и опрыскиватели',
-    'cat_15': 'Фрезеры',
-    'cat_16': 'Электрооборудование'
-  };
-  return categoryMap[categoryId] || 'Неизвестная категория';
-};
-
-const getBrandName = (brandId) => {
-  const brandMap = {
-    'makita': 'Makita',
-    'bosch': 'Bosch',
-    'dewalt': 'DeWalt',
-    'milwaukee': 'Milwaukee',
-    'onex': 'ONE X',
-    'interskol': 'Интерскол',
-    'crown': 'Crown',
-    'univ': 'Универсальные',
-    'slavmash': 'Славмаш',
-    'uni_t': 'UNI-T',
-    'richda': 'Richda',
-    'ingco': 'INGCO',
-    'leo': 'LEO',
-    'raznie': 'Разные',
-    'komplekt': 'Комплект',
-    'prochie': 'Прочие'
-  };
-  return brandMap[brandId] || 'Неизвестный бренд';
-};
-
-const getCategoryId = (categoryName) => {
-  const categoryMap = {
-    'Болгарки': 'cat_1',
-    'Лазерные уровни': 'cat_2',
-    'Шуруповёрты': 'cat_3',
-    'Дрели': 'cat_4',
-    'Перфораторы': 'cat_5',
-    'Наборы инструментов': 'cat_6',
-    'Насадки и аксессуары': 'cat_7',
-    'Измерительные инструменты': 'cat_8',
-    'Шлифовальные машины': 'cat_9',
-    'Гайковёрты': 'cat_10',
-    'Тепловое оборудование': 'cat_11',
-    'Эндоскопы': 'cat_12',
-    'Прочие инструменты': 'cat_13',
-    'Насосы и опрыскиватели': 'cat_14',
-    'Фрезеры': 'cat_15',
-    'Электрооборудование': 'cat_16'
-  };
-  return categoryMap[categoryName] || 'cat_1';
-};
 
 // Функции для работы с заказами
 function loadOrders() {
@@ -126,7 +34,6 @@ function loadOrders() {
     const data = fs.readFileSync(ORDERS_FILE, 'utf8');
     return JSON.parse(data);
   } catch (error) {
-    console.error('Ошибка загрузки заказов:', error);
     return [];
   }
 }
@@ -134,7 +41,7 @@ function loadOrders() {
 function saveOrder(order) {
   const orders = loadOrders();
   order.id = Date.now();
-  order.status = 'pending';
+  order.status = 'pending'; // pending, approved, payment_received, rejected
   order.createdAt = new Date().toISOString();
   orders.push(order);
   fs.writeFileSync(ORDERS_FILE, JSON.stringify(orders, null, 2));
@@ -201,55 +108,34 @@ bot.on('callback_query', async (callbackQuery) => {
   const data = callbackQuery.data;
 
   try {
-    if (data.startsWith('cat_')) {
-      const categoryId = data;
-      const categoryName = getCategoryName(categoryId);
-      const categoryText = `🔧 ${categoryName}\n\nВыберите бренд:`;
+    if (data.startsWith('category_')) {
+      const category = data.replace('category_', '');
+      const categoryText = `🔧 ${category}\n\nВыберите товар:`;
       
       await bot.editMessageText(categoryText, {
         chat_id: chatId,
         message_id: message.message_id,
-        ...Keyboard.categoryBrands(categoryId, products)
-      });
-    }
-    else if (data.startsWith('brand_')) {
-      const parts = data.split('_');
-      const categoryId = parts[1];
-      const brandId = parts[2];
-      
-      const categoryName = getCategoryName(categoryId);
-      const brandName = getBrandName(brandId);
-      const brandText = `🏷️ ${brandName} - ${categoryName}\n\nВыберите товар:`;
-      
-      await bot.editMessageText(brandText, {
-        chat_id: chatId,
-        message_id: message.message_id,
-        ...Keyboard.brandProducts(categoryId, brandId, products)
+        ...Keyboard.categoryProducts(category)
       });
     }
     else if (data.startsWith('product_')) {
       const productId = parseInt(data.replace('product_', ''));
       
-      // Находим товар во всех категориях и брендах
+      // Находим товар во всех категориях
       let product = null;
       let categoryName = '';
-      let brandName = '';
       
-      for (const [category, brands] of Object.entries(products)) {
-        for (const [brand, items] of Object.entries(brands)) {
-          const foundProduct = items.find(p => p.id === productId);
-          if (foundProduct) {
-            product = foundProduct;
-            categoryName = category;
-            brandName = brand;
-            break;
-          }
+      for (const [category, items] of Object.entries(products)) {
+        const foundProduct = items.find(p => p.id === productId);
+        if (foundProduct) {
+          product = foundProduct;
+          categoryName = category;
+          break;
         }
-        if (product) break;
       }
       
       if (product) {
-        const productText = `🛠 ${product.name}\n🏷️ Бренд: ${brandName}\n⚡ Мощность: ${product.power}\n💰 Цена: ${product.price} сум\n📝 Описание: ${product.description}`;
+        const productText = `🛠 ${product.name}\n⚡ Мощность: ${product.power}\n💰 Цена: ${product.price} сум\n📝 Описание: ${product.description}`;
         
         await bot.editMessageText(productText, {
           chat_id: chatId,
@@ -278,40 +164,6 @@ bot.on('callback_query', async (callbackQuery) => {
         message_id: message.message_id,
         ...Keyboard.mainMenu()
       });
-    }
-    else if (data === 'back_to_products') {
-      // Находим категорию товара для возврата
-      const userState = userStates.get(chatId);
-      if (userState && userState.productId) {
-        const productId = userState.productId;
-        let categoryName = '';
-        
-        for (const [category, brands] of Object.entries(products)) {
-          for (const [brand, items] of Object.entries(brands)) {
-            const foundProduct = items.find(p => p.id === productId);
-            if (foundProduct) {
-              categoryName = category;
-              break;
-            }
-          }
-          if (categoryName) break;
-        }
-        
-        if (categoryName) {
-          const categoryId = getCategoryId(categoryName);
-          await bot.editMessageText(`🔧 ${categoryName}\n\nВыберите бренд:`, {
-            chat_id: chatId,
-            message_id: message.message_id,
-            ...Keyboard.categoryBrands(categoryId, products)
-          });
-        }
-      } else {
-        await bot.editMessageText('Выберите категорию инструментов:', {
-          chat_id: chatId,
-          message_id: message.message_id,
-          ...Keyboard.mainMenu()
-        });
-      }
     }
     else if (data.startsWith('approve_')) {
       // Обработка подтверждения заказа админом
@@ -457,15 +309,12 @@ bot.on('message', async (msg) => {
       
       // Находим информацию о товаре
       let product = null;
-      for (const [category, brands] of Object.entries(products)) {
-        for (const [brand, items] of Object.entries(brands)) {
-          const foundProduct = items.find(p => p.id === userState.productId);
-          if (foundProduct) {
-            product = foundProduct;
-            break;
-          }
+      for (const [category, items] of Object.entries(products)) {
+        const foundProduct = items.find(p => p.id === userState.productId);
+        if (foundProduct) {
+          product = foundProduct;
+          break;
         }
-        if (product) break;
       }
       
       if (product) {
